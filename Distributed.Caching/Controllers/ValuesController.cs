@@ -1,5 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
+using Newtonsoft.Json;
+using System;
 using System.Text;
 
 namespace Distributed.Caching.Controllers
@@ -14,19 +17,26 @@ namespace Distributed.Caching.Controllers
             _distributedCache = distributedCache;
         }
 
-        [HttpGet("set")]
-        public async Task<IActionResult> Set(string name, string surname)
+        [HttpPost("set")]
+        public async Task<IActionResult> Set(string key, object data)
         {
-            await _distributedCache.SetStringAsync("name", name, options: new()
-            {
-                AbsoluteExpiration = DateTime.Now.AddSeconds(30),
-                SlidingExpiration = TimeSpan.FromSeconds(5)
-            });
-            await _distributedCache.SetAsync("surname", Encoding.UTF8.GetBytes(surname), options: new()
-            {
-                AbsoluteExpiration = DateTime.Now.AddSeconds(30),
-                SlidingExpiration = TimeSpan.FromSeconds(5)
-            });
+            TimeSpan timeSpan = TimeSpan.FromSeconds(1200); 
+            
+            var option = new DistributedCacheEntryOptions().SetSlidingExpiration(timeSpan);
+            option.AbsoluteExpirationRelativeToNow = timeSpan;
+            var value = JsonConvert.SerializeObject(data);
+            await _distributedCache.SetStringAsync(key, value, option);
+
+            //await _distributedCache.SetStringAsync("name", name, options: new()
+            //{
+            //    AbsoluteExpiration = DateTime.Now.AddSeconds(30),
+            //    SlidingExpiration = TimeSpan.FromSeconds(5)
+            //});
+            //await _distributedCache.SetAsync("surname", Encoding.UTF8.GetBytes(surname), options: new()
+            //{
+            //    AbsoluteExpiration = DateTime.Now.AddSeconds(30),
+            //    SlidingExpiration = TimeSpan.FromSeconds(5)
+            //});
             return Ok();
         }
 
